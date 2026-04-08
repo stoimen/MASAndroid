@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
-import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -41,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -51,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -76,7 +73,7 @@ fun MuseumScannerApp() {
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    val client = remember { OpenAiVisionClient() }
+    val aiProvider = remember { AiProviderFactory.createDefault() }
 
     val ttsEngine = remember {
         TextToSpeech(context, null)
@@ -186,7 +183,7 @@ fun MuseumScannerApp() {
                     scope.launch {
                         try {
                             val result = withContext(Dispatchers.IO) {
-                                client.explainArtwork(bitmap, languageStyle)
+                                aiProvider.explainArtwork(bitmap, languageStyle)
                             }
                             explanation = result
                         } catch (t: Throwable) {
@@ -233,19 +230,4 @@ fun MuseumScannerApp() {
             }
         }
     }
-}
-
-private class OpenAiVisionClient {
-    private val api = OpenAiApi()
-
-    suspend fun explainArtwork(bitmap: Bitmap, styleInstruction: String): String {
-        val base64Image = bitmap.toBase64Jpeg()
-        return api.describeArtwork(base64Image, styleInstruction)
-    }
-}
-
-private fun Bitmap.toBase64Jpeg(quality: Int = 90): String {
-    val output = ByteArrayOutputStream()
-    compress(Bitmap.CompressFormat.JPEG, quality, output)
-    return Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
 }
